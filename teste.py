@@ -1,3 +1,4 @@
+#Test to check the minimum distance of the codewords
 import numpy as np
 
 binaryMatrix = [[0, 0, 0, 0],
@@ -40,8 +41,8 @@ print(codewords, "\n")
 
 distance = 0
 minDistance = 8
-linha1 = 0
-linha2 = 0
+linha1 = 0 #Those two are just to say wich rows have the said min distance
+linha2 = 0 #It returns the last two rows that it found with the said distance
 for i in range(0, len(codewords)):
     if i == 0:
         zeros = 0

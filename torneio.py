@@ -2,6 +2,8 @@ import random
 import sympy
 import numpy as np
 
+#Tournament vers of the code, not updated
+#If you want to use the tournament code just copy the generations function
 class Genome:
     def __init__(self, data_size, codeword_size, fitness_value=0):
         self.fitness_value = fitness_value
