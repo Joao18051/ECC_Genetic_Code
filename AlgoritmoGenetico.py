@@ -238,10 +238,21 @@ data_size = 4
 
 population_size = 1000
 gens = 200
-mutation = 10 #porcentagem
+mutation = 10 #Em porcentagem, chance de um idivíduo sofrer mutação
 mutationH = 2 #Quantiade de bits
 mutationG = 1
 crossover = 50 
 
+#Tabela de pontuações:
+#Se H *G^T não for uma matriz 0, fitness += qtd. de zeros
+#Se H *G^T for uma matriz 0, fitness += 20
+#Se G for L.I, fitness += 5
+#A pontuação da distancia é dado por: fitness += 3^distanciaMinima
+#(Distancia minima só é calculada se H *G^T = 0)
+#Assim, um indivíduo que tem H *G^T = 0 e G L.I, tem fitness:
+#26 - Distancia 0
+#28 - Distancia 1
+#34 - Distancia 2
+#52 - Distancia 3
 main = Main(data_size, codeword_size, population_size, gens, mutation, crossover, mutationH, mutationG)
 main.start()
