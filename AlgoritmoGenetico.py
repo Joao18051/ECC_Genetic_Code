@@ -50,24 +50,27 @@ class Genome:
         else:
             return False
 
+    def binaryCountDigits(self, n):
+        num = (2 **n)
+        binary = [[] for _ in range(0 , num)]
+
+        for i in range(0, num):
+            temp = i
+
+            if temp == 0:
+                binary[i] = [0 for _ in range(0, n)]
+            else:
+                while temp >=1:
+                    binary[i].insert(0, temp %2)
+                    temp = temp //2
+            #Check if the binary is n bits long
+            while len(binary[i]) <n:
+                binary[i].insert(0, 0)
+
+        return binary
+    
     def calcDistance(self, gMatrix):
-        binaryMatrix = [[0, 0, 0, 0],
-                [0, 0, 0, 1],
-                [0, 0, 1, 0],
-                [0, 0, 1, 1],
-                [0, 1, 0, 0],
-                [0, 1, 0, 1],
-                [0, 1, 1, 0],
-                [0, 1, 1, 1],
-                [1, 0, 0, 0],
-                [1, 0, 0, 1],
-                [1, 0, 1, 0],
-                [1, 0, 1, 1],
-                [1, 1, 0, 0],
-                [1, 1, 0, 1],
-                [1, 1, 1, 0],
-                [1, 1, 1, 1]
-                ]
+        binaryMatrix = self.binaryCountDigits(self.data_size)
 
         gMatrix = np.array(gMatrix)
 
@@ -97,33 +100,96 @@ class Genome:
                 distance = 0
         return minDistance
     
+    def sydroms(self):
+        data = [1, 1, 1, 1]
+
+        gMatrix = self.G_matrix
+
+        hMatrix = self.H_matrix
+        hMatrix = hMatrix.transpose()
+
+        codeword = np.matmul(data, gMatrix)
+        for i in range(len(codeword)):
+            if codeword[i] %2 == 0:
+                codeword[i] = 0
+            else:
+                codeword[i] = 1
+
+        sydromns = [[0] for _ in range(7)]
+
+        for i in range(len(codeword)):
+            if codeword[i] == 0:
+                past = 0
+                codeword[i] = 1
+            else:
+                past = 1
+                codeword[i] = 0
+
+            sydromn = np.matmul(codeword, hMatrix)
+            for k in range(len(sydromn)):
+                if sydromn[k] %2 == 0:
+                    sydromn[k] = 0
+                else:
+                    sydromn[k] = 1
+            sydromns[i] = sydromn
+            codeword[i] = past
+
+        c = 0
+        count = 0
+
+        for i in range(len(sydromns)):
+            for j in range(i +1, len(sydromns)):
+                if (sydromns[i] != sydromns[j]).any():
+                    c += 1
+
+            if c == len(sydromns) -(i +1):
+                count += 1
+            c = 0
+
+        return count
+
     def fitness(self):
         self.fitness_value = 0
         self.matrices()
-        transposeG = self.G_matrix.transpose()
-        mult = np.matmul(self.H_matrix, transposeG)
+        #does H matrix have a standard amount of ones?
+        ones = 0
+        for i in range(0, len(self.H_matrix)):
+            for j in range(0, len(self.H_matrix[i])):
+                if self.H_matrix [i] [j] == 1:
+                    ones += 1 #max 21
+        if ones >= 12: #1 à 63, fazer contador binário
+            self.fitness_value += 1
+            #is G matrix linear?
+            isGLI = self.isLinearIndepent(self.G_matrix) #Alterar dimensões
+            if isGLI:
+                self.fitness_value += 1
+                #is H*G^T matrix all zeroes?
+                transposeG = self.G_matrix.transpose()
+                mult = np.matmul(self.H_matrix, transposeG)
 
-        zeros = 0
-        for i in range(0, len(mult)):
-            for j in range(0, len(mult[i])):
-                if mult [i] [j] == 0:
-                    zeros += 1 #max 12
-        if zeros == 12:
-            self.fitness_value += 20
-        else:
-            self.fitness_value += zeros 
+                zeros = 0
+                for i in range(0, len(mult)):
+                    for j in range(0, len(mult[i])):
+                        #garante apenas binarios
+                        if mult [i] [j] %2 == 0:
+                            mult [i] [j] = 0
+                        if mult [i] [j] %2 == 1:
+                            mult [i] [j] = 1
+                        #Contar zeros
+                        if mult [i] [j] == 0:
+                            zeros += 1 #max 12
+                if zeros == 12: #dados x redundancia
+                    self.fitness_value += 12
+                    #Minimun Distance
+                    self.minDistanceValue = self.calcDistance(self.G_matrix)
+                    self.fitness_value += self.minDistanceValue
 
-        if zeros == 12:
-            self.minDistanceValue = self.calcDistance(self.G_matrix)
-            self.fitness_value += 3**self.minDistanceValue
-
-        #isHLI = self.isLinearIndepent(self.H_matrix)
-        #if isHLI:
-            #self.fitness_value += 5
-
-        isGLI = self.isLinearIndepent(self.G_matrix)
-        if isGLI:
-            self.fitness_value += 5
+                    if self.minDistanceValue > 2:
+                        #There are 7 different sydroms?
+                        if self.sydroms() == 7: #2^(n) -1
+                            self.fitness_value += 1
+                else:
+                    self.fitness_value += zeros
 
     def mutate(self, mutation_rate):
         if random.randint(1, 100) < mutation_rate:
@@ -166,7 +232,7 @@ class Main:
         k = 1
         f = 0
 
-        while f < 52:
+        while f < 18:
         #for _ in range(self.gens):
             for i in range(self.population_size):
                 population[i].fitness()
@@ -179,8 +245,8 @@ class Main:
             for i in range(self.population_size):
                 if population[i].fitness_value > f:
                     f = population[i].fitness_value
-            if f >= 28:
-                print("Maior fitness: ", f)
+            
+            print("Maior fitness: ", f)
         return population
 
     def new_gen(self, population: Genome):
@@ -223,36 +289,38 @@ class Main:
 
         j = 0
         for i in range(len(population) -1):
-            if population[i].fitness_value >= 52: 
+            if population[i].fitness_value >= 18: 
                 j += 1
                 print("Indivíduo: ",population[i].genes)
                 print("Matriz H: ", population[i].H_matrix)
                 print("Matriz G: ",population[i].G_matrix)
                 print("Distancia Minima: ",population[i].minDistanceValue)
                 print("Fitness: ",population[i].fitness_value, "\n")
+        return population
 
-        print(f'Há {j} combinações de matrizes que satisfazem as condições')
-
-codeword_size = 7
-data_size = 4
+codeword_size = 7 #20
+data_size = 4 #8
 
 population_size = 1000
-gens = 200
+gens = 1000
 mutation = 10 #Em porcentagem, chance de um idivíduo sofrer mutação
 mutationH = 2 #Quantiade de bits
-mutationG = 1
+mutationG = 3
 crossover = 50 
 
-#Tabela de pontuações:
-#Se H *G^T não for uma matriz 0, fitness += qtd. de zeros
-#Se H *G^T for uma matriz 0, fitness += 20
-#Se G for L.I, fitness += 5
-#A pontuação da distancia é dado por: fitness += 3^distanciaMinima
-#(Distancia minima só é calculada se H *G^T = 0)
-#Assim, um indivíduo que tem H *G^T = 0 e G L.I, tem fitness:
-#26 - Distancia 0
-#28 - Distancia 1
-#34 - Distancia 2
-#52 - Distancia 3
+#Points table:
+#1 - H matrix have a standard amount of ones or more (>= 12)
+#2 - G matrix is linear
+#2 -> 13 - H*G^T matrix != 0 
+#14 - H*G^T matrix == 0 
+#14 - Min distance = 0
+#15 - Min distance = 1
+#16 - Min distance = 2
+#17 - Min distance = 3
+#18 - Min distance = 3 +sydromns
+
 main = Main(data_size, codeword_size, population_size, gens, mutation, crossover, mutationH, mutationG)
 main.start()
+
+#Matriz G 16x40
+#Matriz H 24x40
