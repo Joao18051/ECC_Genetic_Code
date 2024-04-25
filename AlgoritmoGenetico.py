@@ -50,27 +50,21 @@ class Genome:
         else:
             return False
 
-    def binaryCountDigits(self, n):
-        num = (2 **n)
-        binary = [[] for _ in range(0 , num)]
-
-        for i in range(0, num):
-            temp = i
-
-            if temp == 0:
-                binary[i] = [0 for _ in range(0, n)]
-            else:
-                while temp >=1:
-                    binary[i].insert(0, temp %2)
-                    temp = temp //2
-            #Check if the binary is n bits long
-            while len(binary[i]) <n:
-                binary[i].insert(0, 0)
+    def binaryCounter(self, num):
+        binary = []
+        while num >=1:
+            binary.insert(0, num %2)
+            num = num //2
 
         return binary
     
     def calcDistance(self, gMatrix):
-        binaryMatrix = self.binaryCountDigits(self.data_size)
+        binaryMatrix = []
+        for i in range(0, 2** self.data_size):
+            binaryMatrix.append(self.binaryCounter(i))
+
+            while len(binaryMatrix[i]) < self.data_size:
+               binaryMatrix[i].insert(0, 0)
 
         gMatrix = np.array(gMatrix)
 
@@ -101,7 +95,7 @@ class Genome:
         return minDistance
     
     def sydroms(self):
-        data = [1, 1, 1, 1]
+        data = self.binaryCounter((2 **self.data_size) -1)
 
         gMatrix = self.G_matrix
 
@@ -148,6 +142,18 @@ class Genome:
 
         return count
 
+    def standardOnes(self):
+        num = []
+        for i in range(1, self.codeword_size +1):
+            num.append(self.binaryCounter(i))
+        
+        c = 0
+        for i in range(0, len(num)):
+            for j in range(0, len(num[0])):
+                if num[i][j] == 1:
+                    c += 1
+        return c
+
     def fitness(self):
         self.fitness_value = 0
         self.matrices()
@@ -157,36 +163,37 @@ class Genome:
             for j in range(0, len(self.H_matrix[i])):
                 if self.H_matrix [i] [j] == 1:
                     ones += 1 #max 21
-        if ones >= 12: #1 à 63, fazer contador binário
+        if ones >= self.standardOnes():
             self.fitness_value += 1
             #is G matrix linear?
-            isGLI = self.isLinearIndepent(self.G_matrix) #Alterar dimensões
+            isGLI = self.isLinearIndepent(self.G_matrix)
             if isGLI:
                 self.fitness_value += 1
-                #is H*G^T matrix all zeroes?
+                #H*G^T
                 transposeG = self.G_matrix.transpose()
                 mult = np.matmul(self.H_matrix, transposeG)
 
                 zeros = 0
                 for i in range(0, len(mult)):
                     for j in range(0, len(mult[i])):
-                        #garante apenas binarios
-                        if mult [i] [j] %2 == 0:
-                            mult [i] [j] = 0
-                        if mult [i] [j] %2 == 1:
-                            mult [i] [j] = 1
-                        #Contar zeros
-                        if mult [i] [j] == 0:
-                            zeros += 1 #max 12
-                if zeros == 12: #dados x redundancia
-                    self.fitness_value += 12
+                        #Guarantees only binary numbers
+                        if mult[i][j] %2 == 0:
+                            mult[i][j] = 0
+                        if mult[i][j] %2 == 1:
+                            mult[i][j] = 1
+                        #Count zeroes
+                        if mult[i][j] == 0:
+                            zeros += 1 
+                #is H*G^T matrix all zeroes?
+                if zeros == self.data_size *self.parity_size:
+                    self.fitness_value += self.data_size *self.parity_size
                     #Minimun Distance
                     self.minDistanceValue = self.calcDistance(self.G_matrix)
                     self.fitness_value += self.minDistanceValue
 
                     if self.minDistanceValue > 2:
-                        #There are 7 different sydroms?
-                        if self.sydroms() == 7: #2^(n) -1
+                        #There are 2^(n) -1 different sydroms?
+                        if self.sydroms() == (2 **self.parity_size) -1:
                             self.fitness_value += 1
                 else:
                     self.fitness_value += zeros
@@ -232,13 +239,13 @@ class Main:
         k = 1
         f = 0
 
-        while f < 18:
-        #for _ in range(self.gens):
+        while f < 17: #Will stop generating if finds at least one subject that have the requested fitness
+        #for _ in range(self.gens): #Will stop generating if reaches the generation stabilished
             for i in range(self.population_size):
                 population[i].fitness()
             population = sorted(population, key=lambda genome: genome.fitness_value, reverse=True)[:self.population_size //2]
             
-            population = self.new_gen(population)#self.new_gen(newPop)
+            population = self.new_gen(population)
             print("Geração ", k)
             k += 1
 
@@ -289,7 +296,7 @@ class Main:
 
         j = 0
         for i in range(len(population) -1):
-            if population[i].fitness_value >= 18: 
+            if population[i].fitness_value >= 17: 
                 j += 1
                 print("Indivíduo: ",population[i].genes)
                 print("Matriz H: ", population[i].H_matrix)
@@ -298,15 +305,15 @@ class Main:
                 print("Fitness: ",population[i].fitness_value, "\n")
         return population
 
-codeword_size = 7 #20
-data_size = 4 #8
+codeword_size = 7
+data_size = 4
 
-population_size = 1000
+population_size = 5000
 gens = 1000
-mutation = 10 #Em porcentagem, chance de um idivíduo sofrer mutação
-mutationH = 2 #Quantiade de bits
-mutationG = 3
-crossover = 50 
+mutation = 10 #In percentage, chance of an individual undergoing mutation
+mutationH = 4 #In number of bits
+mutationG = 6 #In number of bits
+crossover = 50 #Percentage of the father one over father two
 
 #Points table:
 #1 - H matrix have a standard amount of ones or more (>= 12)
