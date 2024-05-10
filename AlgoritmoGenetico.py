@@ -345,14 +345,14 @@ class Main:
                 #break
         return population
 
-codeword_size = 14
-data_size = 8
+codeword_size = 7
+data_size = 4
 
 population_size = 1000
-gens = 7000
-mutation = 20 #In percentage, chance of an individual undergoing mutation
-mutationH = 4 #In number of bits
-mutationG = 6 #In number of bits
+gens = 100
+mutation = 10 #In percentage, chance of an individual undergoing mutation
+mutationH = 2 #In number of bits
+mutationG = 3 #In number of bits
 crossover = 50 #Percentage of the father one over father two
 
 #Points table:
