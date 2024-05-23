@@ -95,6 +95,19 @@ class Genome:
                 distance = 0
         return minDistance
     
+    def standardOnes(self):
+        num = []
+        for i in range(1, self.codeword_size +1):
+            num.append(self.binaryCounter(i))
+            while len(num[i -1]) < self.parity_size:
+                num[i -1].insert(0, 0)
+        c = 0
+        for i in range(0, len(num)):
+            for j in range(0, len(num[0])):
+                if num[i][j] == 1:
+                    c += 1
+        return c
+
     def sydroms(self):
         data = self.binaryCounter((2 **self.data_size) -1)
 
@@ -193,41 +206,50 @@ class Genome:
                     if c == len(identity):
                         self.fitness_value += c
 
-                        #is G matrix linear?
-                        isGLI = self.isLinearIndepent(self.G_matrix)
-                        if isGLI:
+                        #H have standard ones?
+                        ones = 0
+                        for i in range(0, len(self.H_matrix)):
+                            for j in range(0, len(self.H_matrix[i])):
+                                if self.H_matrix [i] [j] == 1:
+                                    ones += 1 
+                        if ones == self.standardOnes():
                             self.fitness_value += 1
-                            #H*G^T
-                            transposeG = self.G_matrix.transpose()
-                            mult = np.matmul(self.H_matrix, transposeG)
 
-                            zeros = 0
-                            for i in range(0, len(mult)):
-                                for j in range(0, len(mult[i])):
-                                    #Guarantees only binary numbers
-                                    if mult[i][j] %2 == 0:
-                                        mult[i][j] = 0
-                                    if mult[i][j] %2 == 1:
-                                        mult[i][j] = 1
-                                    #Count zeroes
-                                    if mult[i][j] == 0:
-                                        zeros += 1 
-                            #is H*G^T matrix all zeroes?
-                            if zeros == self.data_size *self.parity_size:
-                                self.fitness_value += self.data_size *self.parity_size
-                                #Minimun Distance
-                                self.minDistanceValue = self.calcDistance(self.G_matrix)
-                                self.fitness_value += self.minDistanceValue
+                            #is G matrix linear?
+                            isGLI = self.isLinearIndepent(self.G_matrix)
+                            if isGLI:
+                                self.fitness_value += 1
+                                #H*G^T
+                                transposeG = self.G_matrix.transpose()
+                                mult = np.matmul(self.H_matrix, transposeG)
 
-                                self.sydroms()
-                                self.fitness_value += self.sydrom
-                            else:
-                                self.fitness_value += zeros
+                                zeros = 0
+                                for i in range(0, len(mult)):
+                                    for j in range(0, len(mult[i])):
+                                        #Guarantees only binary numbers
+                                        if mult[i][j] %2 == 0:
+                                            mult[i][j] = 0
+                                        if mult[i][j] %2 == 1:
+                                            mult[i][j] = 1
+                                        #Count zeroes
+                                        if mult[i][j] == 0:
+                                            zeros += 1 
+                                #is H*G^T matrix all zeroes?
+                                if zeros == self.data_size *self.parity_size:
+                                    self.fitness_value += self.data_size *self.parity_size
+                                    #Minimun Distance
+                                    self.minDistanceValue = self.calcDistance(self.G_matrix)
+                                    self.fitness_value += self.minDistanceValue
+
+                                    self.sydroms()
+                                    self.fitness_value += self.sydrom
+                                else:
+                                    self.fitness_value += zeros
                     else:        
                         self.fitness_value += c
 
     def mutate(self, mutation_rate):
-        if random.randint(1, 100) < mutation_rate:
+        if random.randint(1, 100) <= mutation_rate:
             k = 0
             while k < mutationH:
                 k += 1
@@ -301,19 +323,19 @@ class Main:
             child_genome = Genome(data_size, codeword_size, mutationG, mutationH)
             k = 0
             while k < (parent1.H_size -1) *(self.crossover/100):
-                child_genome.genes[k +7] = parent1.genes[k +7]
+                child_genome.genes[k] = parent1.genes[k] #+7
                 k += 1
             if k != parent1.H_size:
                 while k < (parent2.H_size -1) *(self.crossover/100):
-                    child_genome.genes[k +7] = parent2.genes[k +7]
+                    child_genome.genes[k] = parent2.genes[k] #+7
                     k += 1
             m = 0
             while m < (parent1.G_size -1) *(self.crossover/100):
-                child_genome.genes[m +k +7] = parent1.genes[m +k +7]    
+                child_genome.genes[m +k] = parent1.genes[m +k] #+7   
                 m += 1
             if m != parent1.G_size:
                 while m < (parent2.G_size -1) *(self.crossover/100):
-                    child_genome.genes[m +k +7] = parent2.genes[m +k +7]    
+                    child_genome.genes[m +k] = parent2.genes[m +k] #+7    
                 m += 1
                 
             child_genome.mutate(self.mutation)
@@ -345,24 +367,24 @@ class Main:
                 #break
         return population
 
-codeword_size = 7
-data_size = 4
+codeword_size = 15 
+data_size = 11 
 
-population_size = 1000
-gens = 100
-mutation = 10 #In percentage, chance of an individual undergoing mutation
-mutationH = 2 #In number of bits
-mutationG = 3 #In number of bits
+population_size = 2500
+gens = 3000
+mutation = 20 #In percentage, chance of an individual undergoing mutation
+mutationH = 8 #In number of bits
+mutationG = 22 #In number of bits
 crossover = 50 #Percentage of the father one over father two
 
 #Points table:
 #1 - No column in H is all 0s
 #2 - No row in H is all 0s
 #3 - No columns are equal
-#3 +number of identity columns - The identity matrix is present in H (3 in (7,4), 6 in (14,8))
+#3 +number of identity columns - The identity matrix is present in H (3 in (7,4), 4 in (15,11))
 #3 +number of identity columns +1 - G matrix is linear
-#3 +number of identity columns +1 +(data size *parity size) - H*G^T matrix == 0 (12 in (7,4), 48 in (14,8))
-#3 +number of identity columns +1 +(data size *parity size) +0 +distinc sydroms - Min distance = 0 (7 in (7,4), 14 in (14,8))
+#3 +number of identity columns +1 +(data size *parity size) - H*G^T matrix == 0 (12 in (7,4), 44 in (15,11))
+#3 +number of identity columns +1 +(data size *parity size) +0 +distinc sydroms - Min distance = 0 (7 in (7,4), 15 in (15,11))
 #3 +number of identity columns +1 +(data size *parity size) +1 +distinc sydroms - Min distance = 1
 #3 +number of identity columns +1 +(data size *parity size) +2 +distinc sydroms - Min distance = 2 
 #3 +number of identity columns +1 +(data size *parity size) +3 +distinc sydroms - Min distance = 3
@@ -372,5 +394,4 @@ crossover = 50 #Percentage of the father one over father two
 main = Main(data_size, codeword_size, population_size, gens, mutation, crossover, mutationH, mutationG)
 main.start()
 
-#Matriz G 16x40
-#Matriz H 24x40
+#10 crossover cria 20 individuos, escolhe os 5 melhores e o resto cria aleatorio
