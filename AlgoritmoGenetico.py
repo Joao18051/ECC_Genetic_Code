@@ -297,6 +297,9 @@ class Main:
             population = sorted(population, key=lambda genome: genome.fitness_value, reverse=True)[:self.population_size //2]
             
             population = self.new_gen(population)
+            for i in range(0, len(population)):
+                population[i].mutate(self.mutation)
+
             print("\n", "Geração ", k)
             k += 1
 
@@ -310,42 +313,44 @@ class Main:
         return population
 
     def new_gen(self, population: Genome):
-        i = 0
+        i = -1
         while len(population) < self.population_size:
+            i += 1
             parent1 = population[i]
             i += 1
 
             if i > len(population[i].genes) - 1:
                 i = 0
             parent2 = population[i]
-            i += 1
 
-            child_genome = Genome(data_size, codeword_size, mutationG, mutationH)
-            k = 0
-            while k < (parent1.H_size -1) *(self.crossover/100):
-                child_genome.genes[k] = parent1.genes[k] #+7
-                k += 1
-            if k != parent1.H_size:
-                while k < (parent2.H_size -1) *(self.crossover/100):
-                    child_genome.genes[k] = parent2.genes[k] #+7
+            c = 0
+            while c < 2:
+                child_genome = Genome(data_size, codeword_size, mutationG, mutationH)
+                k = 0
+                while k < (parent1.H_size -1) *(self.crossover/100):
+                    child_genome.genes[k] = parent1.genes[k] #+7
                     k += 1
-            m = 0
-            while m < (parent1.G_size -1) *(self.crossover/100):
-                child_genome.genes[m +k] = parent1.genes[m +k] #+7   
-                m += 1
-            if m != parent1.G_size:
-                while m < (parent2.G_size -1) *(self.crossover/100):
-                    child_genome.genes[m +k] = parent2.genes[m +k] #+7    
-                m += 1
-                
-            child_genome.mutate(self.mutation)
-            population.append(child_genome)
-            #population = np.append(population, child_genome)
+                if k != parent1.H_size:
+                    while k < (parent2.H_size -1) *(self.crossover/100):
+                        child_genome.genes[k] = parent2.genes[k] #+7
+                        k += 1
+                m = 0
+                while m < (parent1.G_size -1) *(self.crossover/100):
+                    child_genome.genes[m +k] = parent1.genes[m +k] #+7   
+                    m += 1
+                if m != parent1.G_size:
+                    while m < (parent2.G_size -1) *(self.crossover/100):
+                        child_genome.genes[m +k] = parent2.genes[m +k] #+7    
+                    m += 1
+                    
+                population.append(child_genome)
+                c += 1 
 
         return population
     
     def start(self):
         population = self.genarations()
+        population = sorted(population, key=lambda genome: genome.fitness_value, reverse=True)
 
         i = 0
         print("Indivíduo: ",population[i].genes)
@@ -367,14 +372,14 @@ class Main:
                 #break
         return population
 
-codeword_size = 15 
-data_size = 11 
+codeword_size = 7
+data_size = 4
 
 population_size = 2500
-gens = 3000
-mutation = 20 #In percentage, chance of an individual undergoing mutation
-mutationH = 8 #In number of bits
-mutationG = 22 #In number of bits
+gens = 1000
+mutation = 10 #In percentage, chance of an individual undergoing mutation
+mutationH = 2 #In number of bits
+mutationG = 3 #In number of bits
 crossover = 50 #Percentage of the father one over father two
 
 #Points table:
@@ -393,5 +398,10 @@ crossover = 50 #Percentage of the father one over father two
 
 main = Main(data_size, codeword_size, population_size, gens, mutation, crossover, mutationH, mutationG)
 main.start()
-
-#10 crossover cria 20 individuos, escolhe os 5 melhores e o resto cria aleatorio
+#Matriz H:  [[0 0 1 1 1 0 1]
+#            [0 1 0 1 0 1 1]
+#            [1 1 1 1 0 0 0]]
+#Matriz G:  [[0 0 1 1 0 1 0]
+#            [1 1 1 1 1 1 1]
+#            [0 0 0 0 1 1 1]
+#            [0 1 1 0 0 0 1]]
